@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="relative max-w-7xl mx-auto bg-white p-6 md:p-10 rounded-3xl shadow-xl">
+
+        <!-- Action Buttons -->
+        <div class="absolute top-4 right-4 md:top-8 md:right-8 flex space-x-2">
+            <button id="importBtn" class="bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors duration-200 py-2 px-4 rounded-full text-sm font-semibold z-10">
+                Import Data
+            </button>
+            <input type="file" id="fileInput" accept=".csv" class="hidden">
+            <button id="exportBtn" class="bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors duration-200 py-2 px-4 rounded-full text-sm font-semibold z-10">
+                Export Data
+            </button>
+        </div>
+
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-2">My Symptom Tracker</h1>
+        <p class="text-center text-gray-600 mb-8">Log your meals, state, and activities to find patterns.</p>
+
+        <!-- Message Box -->
+        <div id="messageBox" class="hidden mb-4 p-4 rounded-lg text-sm text-center font-semibold"></div>
+
+        <!-- Log Type Tabs -->
+        <div class="flex space-x-4 mb-6">
+            <button id="mealTabBtn" class="flex-1 px-4 py-2 rounded-full font-semibold transition-colors duration-200 focus:outline-none">
+                Meal Log
+            </button>
+            <button id="stateTabBtn" class="flex-1 px-4 py-2 rounded-full font-semibold transition-colors duration-200 focus:outline-none">
+                State Log
+            </button>
+        </div>
+
+        <!-- Meal Log Panel -->
+        <div id="mealLogPanel">
+            <!-- Input Form -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label for="date-meal" class="block text-sm font-medium text-gray-700">Date (DD-MM-YYYY)</label>
+                    <input type="text" id="date-meal" placeholder="DD-MM-YYYY" class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="time-meal" class="block text-sm font-medium text-gray-700">Time (24H)</label>
+                    <input type="text" id="time-meal" placeholder="HH:MM" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="food" class="block text-sm font-medium text-gray-700">Meal / Food Items</label>
+                    <input type="text" id="food" placeholder="e.g., Oats with honey, coffee" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- State Log Panel -->
+        <div id="stateLogPanel" class="hidden">
+            <!-- Input Form -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label for="date-state" class="block text-sm font-medium text-gray-700">Date (DD-MM-YYYY)</label>
+                    <input type="text" id="date-state" placeholder="DD-MM-YYYY" class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="time-state" class="block text-sm font-medium text-gray-700">Time (24H)</label>
+                    <input type="text" id="time-state" placeholder="HH:MM" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="severity-state" class="block text-sm font-medium text-gray-700">Severity (1-5)</label>
+                    <select id="severity-state" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">Select</option>
+                        <option value="1">0 - all good</option>
+                        <option value="2">1 - sporadic pain or spasm</option>
+                        <option value="3">2 - somewhat frequent spasm</option>
+                        <option value="4">3 - very frequent spasm</option>
+                        <option value="5">4 - crysis</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-12">
+            <button id="addEntry" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-lg hover:bg-blue-700 transition duration-200 ease-in-out">
+                Add Entry
+            </button>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 text-center">Time chart</h2>
+            <div class="p-4 bg-gray-100 rounded-xl">
+                <canvas id="symptomChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table to display entries -->
+        <div class="overflow-x-auto rounded-xl shadow-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-xl">Date</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meal/Food Items</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
+                        <th scope="col" class="relative px-6 py-3 rounded-tr-xl"><span class="sr-only">Delete</span></th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination Controls -->
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-3" id="paginationControls">
+            <div class="text-sm text-gray-600" id="pageInfo">Page 1 of 1</div>
+            <div class="flex gap-2">
+                <button id="prevPage" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <button id="nextPage" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addEntryBtn = document.getElementById('addEntry');
+            const logTableBody = document.getElementById('logTableBody');
+            const mealTabBtn = document.getElementById('mealTabBtn');
+            const stateTabBtn = document.getElementById('stateTabBtn');
+            const mealLogPanel = document.getElementById('mealLogPanel');
+            const stateLogPanel = document.getElementById('stateLogPanel');
+            const chartCanvas = document.getElementById('symptomChart');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const fileInput = document.getElementById('fileInput');
+            const messageBox = document.getElementById('messageBox');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            
+            let symptomLogData = [];
+            let chartInstance = null;
+            let currentPage = 1;
+            const pageSize = 20;
+
+            // Custom Chart.js plugin to draw vertical lines for meal events
+            const mealLinePlugin = {
+                id: 'mealLinePlugin',
+                beforeDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const mealsDataset = chart.data.datasets.find(ds => ds.label === 'Meal Events');
+                    if (!mealsDataset) return;
+                    
+                    const meta = chart.getDatasetMeta(chart.data.datasets.indexOf(mealsDataset));
+                    const scale = chart.scales.y;
+                    
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)'; // Red with transparency
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 5]); // Dashed line
+                    
+                    meta.data.forEach((point) => {
+                        ctx.beginPath();
+                        ctx.moveTo(point.x, scale.bottom);
+                        ctx.lineTo(point.x, point.y);
+                        ctx.stroke();
+                    });
+                    
+                    ctx.restore();
+                }
+            };
+            Chart.register(mealLinePlugin);
+
+            const showMessage = (message, type = 'info') => {
+                messageBox.textContent = message;
+                messageBox.classList.remove('hidden', 'bg-red-200', 'text-red-800', 'bg-green-200', 'text-green-800', 'bg-gray-200', 'text-gray-800');
+                if (type === 'error') {
+                    messageBox.classList.add('bg-red-200', 'text-red-800');
+                } else if (type === 'success') {
+                    messageBox.classList.add('bg-green-200', 'text-green-800');
+                } else {
+                    messageBox.classList.add('bg-gray-200', 'text-gray-800');
+                }
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 5000);
+            };
+
+            const updateDateTimeFields = () => {
+                const now = new Date();
+                const day = now.getDate().toString().padStart(2, '0');
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const year = now.getFullYear();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const dateString = `${day}-${month}-${year}`;
+                const timeString = `${hours}:${minutes}`;
+                
+                document.getElementById('date-meal').value = dateString;
+                document.getElementById('time-meal').value = timeString;
+                document.getElementById('date-state').value = dateString;
+                document.getElementById('time-state').value = timeString;
+            };
+
+            const loadData = () => {
+                try {
+                    const savedData = localStorage.getItem('symptomLog');
+                    if (savedData) {
+                        symptomLogData = JSON.parse(savedData);
+                    } else {
+                        symptomLogData = [];
+                    }
+                } catch (e) {
+                    console.error("Could not parse data from localStorage:", e);
+                    symptomLogData = [];
+                }
+                renderTable();
+                renderChart();
+            };
+
+            const saveData = () => {
+                try {
+                    localStorage.setItem('symptomLog', JSON.stringify(symptomLogData));
+                } catch (e) {
+                    console.error("Could not save data to localStorage:", e);
+                }
+            };
+
+            const renderTable = () => {
+                logTableBody.innerHTML = '';
+
+                // Sort latest first based on date+time
+                const sorted = [...symptomLogData].sort((a, b) => {
+                    const ta = parseDateTimeForChart(a.date, a.time);
+                    const tb = parseDateTimeForChart(b.date, b.time);
+                    return tb - ta; // newest first
+                });
+
+                const totalItems = sorted.length;
+                const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                const start = (currentPage - 1) * pageSize;
+                const pageData = sorted.slice(start, start + pageSize);
+
+                pageData.forEach((entry) => {
+                    const newRow = document.createElement('tr');
+                    newRow.classList.add('hover:bg-gray-50', 'transition-colors', 'duration-150');
+                    // Use original index from the main array to ensure delete targets the right item
+                    const originalIndex = symptomLogData.indexOf(entry);
+                    newRow.dataset.index = originalIndex;
+
+                    const columns = [entry.date, entry.time, entry.type, entry.food, entry.severity];
+                    columns.forEach(colData => {
+                        const cell = document.createElement('td');
+                        cell.textContent = colData || '';
+                        cell.classList.add('px-6', 'py-4', 'text-sm', 'text-gray-500');
+                        newRow.appendChild(cell);
+                    });
+
+                    const deleteCell = document.createElement('td');
+                    deleteCell.classList.add('px-6', 'py-4', 'text-right', 'text-sm', 'font-medium');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.classList.add('text-red-600', 'hover:text-red-900', 'delete-btn');
+                    deleteButton.addEventListener('click', deleteEntry);
+                    deleteCell.appendChild(deleteButton);
+                    newRow.appendChild(deleteCell);
+
+                    logTableBody.appendChild(newRow);
+                });
+
+                // Update pagination controls
+                if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+                if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+            };
+
+            const parseDateTimeForChart = (dateString, timeString) => {
+                const [day, month, year] = dateString.split('-').map(v => parseInt(v, 10));
+                const [hours, minutes] = timeString.split(':').map(v => parseInt(v, 10));
+                // Construct a Date in LOCAL time to avoid unintended UTC shifts that can move points to a different day
+                const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
+                return d.getTime();
+            };
+
+            const renderChart = () => {
+                const stateEntries = symptomLogData.filter(entry => entry.type === 'State').sort((a, b) => {
+                    return parseDateTimeForChart(a.date, a.time) - parseDateTimeForChart(b.date, b.time);
+                });
+                const mealEntries = symptomLogData.filter(entry => entry.type === 'Meal').sort((a, b) => {
+                    return parseDateTimeForChart(a.date, a.time) - parseDateTimeForChart(b.date, b.time);
+                });
+
+                const stateData = stateEntries.map(entry => ({
+                    x: parseDateTimeForChart(entry.date, entry.time),
+                    y: parseInt(entry.severity, 10)
+                }));
+                
+                const mealData = mealEntries.map(entry => ({
+                    x: parseDateTimeForChart(entry.date, entry.time),
+                    y: 3 // Set y-value to 3 for meals
+                }));
+
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+                
+                chartInstance = new Chart(chartCanvas, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Symptom Severity',
+                            data: stateData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            tension: 0.1,
+                            fill: true,
+                            pointStyle: 'circle'
+                        }, {
+                            label: 'Meal Events',
+                            data: mealData,
+                            backgroundColor: 'rgb(239, 68, 68)',
+                            borderColor: 'rgb(239, 68, 68)',
+                            pointRadius: 5,
+                            type: 'scatter',
+                            showLine: false,
+                            pointStyle: 'circle'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        const datasetIndex = context[0].datasetIndex;
+                                        const entry = (datasetIndex === 0 ? stateEntries : mealEntries)[context[0].dataIndex];
+                                        return `${entry.type} on ${entry.date} at ${entry.time}`;
+                                    },
+                                    label: (context) => {
+                                        const datasetIndex = context.datasetIndex;
+                                        if (datasetIndex === 0) {
+                                            return `Severity: ${context.raw.y}`;
+                                        } else {
+                                            const mealEntry = mealEntries[context.dataIndex];
+                                            return `Food: ${mealEntry.food}`;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    tooltipFormat: 'PPP p',
+                                    displayFormats: {
+                                        day: 'MMM d'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Severity'
+                                },
+                                min: 0,
+                                max: 5,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const deleteEntry = (event) => {
+                const row = event.target.closest('tr');
+                const index = parseInt(row.dataset.index, 10);
+                symptomLogData.splice(index, 1);
+                saveData();
+                loadData();
+            };
+
+            const setActiveTab = (tab) => {
+                mealLogPanel.classList.add('hidden');
+                stateLogPanel.classList.add('hidden');
+                mealTabBtn.classList.remove('bg-blue-600', 'text-white');
+                mealTabBtn.classList.add('bg-gray-200', 'text-gray-700');
+                stateTabBtn.classList.remove('bg-blue-600', 'text-white');
+                stateTabBtn.classList.add('bg-gray-200', 'text-gray-700');
+
+                if (tab === 'meal') {
+                    mealLogPanel.classList.remove('hidden');
+                    mealTabBtn.classList.add('bg-blue-600', 'text-white');
+                    mealTabBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                } else {
+                    stateLogPanel.classList.remove('hidden');
+                    stateTabBtn.classList.add('bg-blue-600', 'text-white');
+                    stateTabBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                }
+                updateDateTimeFields();
+            };
+
+            const addEntry = () => {
+                const logType = mealLogPanel.classList.contains('hidden') ? 'state' : 'meal';
+                const values = {};
+                const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+                const timePattern = /^\d{2}:\d{2}$/;
+
+                if (logType === 'meal') {
+                    values.date = document.getElementById('date-meal').value.trim();
+                    values.time = document.getElementById('time-meal').value.trim();
+                    values.food = document.getElementById('food').value.trim();
+                    values.severity = '';
+                    
+                    if (!datePattern.test(values.date) || !timePattern.test(values.time) || values.food === '') {
+                        showMessage('Please fill out all required fields and use the DD-MM-YYYY date and HH:MM time format.', 'error');
+                        return;
+                    }
+                } else {
+                    values.date = document.getElementById('date-state').value.trim();
+                    values.time = document.getElementById('time-state').value.trim();
+                    values.food = '';
+                    values.severity = document.getElementById('severity-state').value;
+                    
+                    if (!datePattern.test(values.date) || !timePattern.test(values.time) || values.severity === '') {
+                        showMessage('Please fill out all required fields and use the DD-MM-YYYY date and HH:MM time format.', 'error');
+                        return;
+                    }
+                }
+                
+                values.type = logType.charAt(0).toUpperCase() + logType.slice(1);
+                symptomLogData.push(values);
+                saveData();
+                currentPage = 1; // show latest items on first page after adding
+                loadData();
+                showMessage('Entry added successfully!', 'success');
+                
+                if (logType === 'meal') {
+                    document.getElementById('food').value = '';
+                } else {
+                    document.getElementById('severity-state').value = '';
+                }
+                updateDateTimeFields();
+            };
+
+            const exportData = () => {
+                if (symptomLogData.length === 0) {
+                    showMessage('There is no data to export.', 'info');
+                    return;
+                }
+
+                const headers = ["Date", "Time", "Type", "Meal/Food Items", "Severity"];
+                const csvRows = [headers.join(',')];
+
+                symptomLogData.forEach(entry => {
+                    const row = headers.map(header => {
+                        let value = '';
+                        switch(header) {
+                            case "Date":
+                                value = entry.date;
+                                break;
+                            case "Time":
+                                value = entry.time;
+                                break;
+                            case "Type":
+                                value = entry.type;
+                                break;
+                            case "Meal/Food Items":
+                                value = entry.food;
+                                break;
+                            case "Severity":
+                                value = entry.severity;
+                                break;
+                        }
+                        return `"${value.toString().replace(/"/g, '""')}"`;
+                    });
+                    csvRows.push(row.join(','));
+                });
+
+                const csvString = csvRows.join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'symptom_tracker.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showMessage('Data exported successfully!', 'success');
+            };
+            
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    return;
+                }
+            
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const csvText = e.target.result;
+                    const lines = csvText.trim().split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    const expectedHeaders = ["Date", "Time", "Type", "Meal/Food Items", "Severity"];
+
+                    if (headers.length !== expectedHeaders.length || !headers.every((h, i) => h === expectedHeaders[i])) {
+                        showMessage('Invalid CSV format. Please ensure headers are correct: Date, Time, Type, Meal/Food Items, Severity', 'error');
+                        return;
+                    }
+
+                    const importedData = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Split on comma, but not inside double quotes
+                        if (values.length !== expectedHeaders.length) {
+                            console.warn('Skipping malformed row:', lines[i]);
+                            continue;
+                        }
+                        
+                        const entry = {
+                            date: values[0].trim().replace(/"/g, ''),
+                            time: values[1].trim().replace(/"/g, ''),
+                            type: values[2].trim().replace(/"/g, ''),
+                            food: values[3].trim().replace(/"/g, ''),
+                            severity: values[4].trim().replace(/"/g, '')
+                        };
+                        importedData.push(entry);
+                    }
+                    
+                    symptomLogData = symptomLogData.concat(importedData);
+                    saveData();
+                    currentPage = 1; // go to first page after import
+                    loadData();
+                    showMessage(`Successfully imported ${importedData.length} entries!`, 'success');
+                    
+                    // Reset file input to allow re-importing the same file
+                    fileInput.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            importBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', importData);
+            addEntryBtn.addEventListener('click', addEntry);
+            mealTabBtn.addEventListener('click', () => setActiveTab('meal'));
+            stateTabBtn.addEventListener('click', () => setActiveTab('state'));
+            exportBtn.addEventListener('click', exportData);
+            // Pagination events
+            if (prevPageBtn) {
+                prevPageBtn.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTable();
+                    }
+                });
+            }
+            if (nextPageBtn) {
+                nextPageBtn.addEventListener('click', () => {
+                    currentPage++;
+                    renderTable();
+                });
+            }
+            
+            setActiveTab('meal');
+            loadData();
+        });
+    </script>
+</body>
+</html>
